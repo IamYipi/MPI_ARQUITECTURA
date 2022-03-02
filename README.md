@@ -11,6 +11,7 @@ sudo apt-get install openmpi-bin
 ```
 ## TRABAJO
 
+
 ### PROCESO 0
 - [ ]  Creación Proceso 0 **E/S**, guardado de palabra y su respectiva longitud.
 - [ ]  Notificación *Rol* otros procesos
@@ -22,6 +23,7 @@ sudo apt-get install openmpi-bin
 - Proceder a:
 - [ ]  Envío de letras encontradas al resto de generadores
 - [ ]  Envio **señal terminación** Comprobadores y Generadores, recibir estadísticas de cada grupo
+
 
 ### RESTO PROCESOS
 #### COMPROBADORES
