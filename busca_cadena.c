@@ -3,6 +3,11 @@
 
 int main(int argc, char ** argv){
 
+	if(argc != 2){
+		fprintf(stdout, "Error: Numero invalido de argumentos\n");
+		return 1;
+	}
+	
 	int myrank, nprocs;
 
 	MPI_Init(&argc, &argv);
