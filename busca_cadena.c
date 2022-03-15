@@ -181,7 +181,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		
 		fprintf(stdout,"Soy el proceso %d y la longitud es %d\n",id, longitud);
 
-		// Recibe palabra y id del Generador asignado.
+		// Reciben los COMPROBADORES la palabra y el id del Generador asignado.
 
 		if(rol == 10){
 
