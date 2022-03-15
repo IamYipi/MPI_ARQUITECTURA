@@ -1,76 +1,196 @@
+// Compilar --> mpicc busca_cadena.c -o busca_cadena -lm
+// Ejecutar --> mpirun -np 3 --oversubscribe busca_cadena 1 1
 #include <stdio.h>
 #include <mpi.h>
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
 #define PESO_COMPROBAR  5000000
 #define PESO_GENERAR    10000000
-#define COMPROBADORES 1
-#define GENERADORES 1
-#define CONJUNTO "ABCDEFGHIJKLMNIOQUJAKSGHAJHGSFfghafsghafsghafstjharfasdhjshdjh216531237613&&!123adawawdytfaxwada"
-#define CHAR_NF 32
+#define CHAR_NF 32 // Para marcar no encontrado (espacio, por simplificar)
 #define CHAR_MAX 127
 #define CHAR_MIN 33
-#define INICIAR_ARRAY(valor, array, tam) for (i=0; i<tam; i++) array[i] = valor;
 
 void fuerza_espera(unsigned long);
-void notificar(int numComp, int numGen, MPI_Comm_group group_world, MPI_Comm_group compr_group, MPI_Comm_group gen_group, MPI_Comm  comm_compr, MPI_Comm comm_gen);
 
 int main(int argc, char ** argv){
-	if(argc != 2){
+/*
+ejemplo compilacion: 	mpicc busca_cadena.c -o nombre_ejecutable -lm
+ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
+	 
+	 argumentos: 
+	 					argv[0] = nombre_ejecutable
+						argv[1] = numeroComprobadores
+						argv[2] = 0 si no hay pistas, 1 si hay pistas
+*/
+	if(argc != 3){
+
 		fprintf(stdout, "Error: Numero invalido de argumentos\n");
 		fprintf(stdout, "Usar: mpirun -np X [--oversubscribe] %s numero\n", argv[0]);
+
+		// Siendo "numero" el nº de procesos Comprobadores
+
 		return 1;
+
 	}
 
-	int id, i, j, nprocs, pista, numGen, longitud_word = 0;
-	int etiqueta = 50;
+	int id, nprocs;
 	char palabra[CHAR_MAX];
 
-	// Asignamos variables para la creacion de grupos Generadores y Comprobadores
-	// Con sus respectivos comunicadores
-	MPI_Group group_world,compr_group,gen_group;
-	MPI_Comm  comm_compr, comm_gen;
 	MPI_Status status;
+
+	// Inicio MPI
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &id);
 	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-	MPI_Comm_group(MPI_COMM_WORLD,&group_world);
 
 	if(nprocs < 3){
-		fprintf(stdout,"Error: Numero invalido de procesos, debe ser mayor o igual a 3\n");
-		fprintf(stdout,"Finalizando programa...\n");
-		MPI_Finalize();
-		return 2;
-	}
 
+		fprintf(stdout,"Error: Numero invalido de procesos\n");
+		fprintf(stdout,"Finalizando programa...\n");
+
+		MPI_Finalize();
+
+		return 2;
+
+	}
+	
 	/*Tareas a realizar por el Proceso 0*/
+	
 	if(id == 0){
+	
+		// Se copia la palabra a descubrir en la variable
 
 		strcpy(palabra,"PRACTICAMPI2122");
 
-		/* El proceso E/S tiene en la variable palabra, la palabra correcta */	
+		/* El proceso E/S tiene en la variable palabra, la palabra correcta */
+		
 		printf("La longitud de la palabra es: %ld y hay %d comprobadores\n",
 							strlen(palabra), atoi(argv[1]));
+		
+		int numComp = atoi(argv[1]);
+		int numGen = nprocs - (numComp + 1); // +1 pq seria E/S 
+		
+		// Sabe cuantos Comprobadores existe, y si es posible seguir adelante con el nº de procs
 
-		//Primero obtiene el numero de procesos generadores a partir del numero de comprobadores
-		numComp = COMPROBADORES;
-		numGen = nprocs - (numComp + 1);
+		if(numGen < 1){
 
-		// Funcion que notifica a cada proceso el rol que le corresponde
-		notificar(numComp,numGen,group_world,compr_group,gen_group);
+			fprintf(stdout,"Error: no hay ningun Generador\n");
+			fprintf(stdout,"Aumente el numero de procesos, o disminuya el numero de Comprobadores\n");
+			fprintf(stdout,"Finalizando programa...\n");
 
-		longitud_word = strlen(palabra);
+			MPI_Finalize();
 
-		// Envía mensaje para asegurar que se han establecido los grupos correctamente
-		MPI_Bcast(&i, 1, MPI_INT, 0, MPI_COMM_WORLD );
+			return 3;
 
-		// Envia mensaje con la longitud a los COMPROBADORES
-		MPI_Bcast(&longitud_word,1,MPI_INT,0,comm_compr);
+		}
+		
+		// Dependiendo del nprocs y del nºComprobadores, habrá un nºGeneradores
+		//   -> Indica a cada proceso su rol, si es Generador, le dice cual es su Comprobador
 
+		int i,j;
+
+		// Variables tag para establecer comunicaciones con cada grupo especifico
+
+		int compr_tag = 10;
+		int gen_tag   = 20;
+
+		// Envia rol a los procesos comprobadores
+
+		for(i = 1; i <= numComp; i++){
+
+			MPI_Send(&compr_tag, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+
+		}
+
+		// Se guarda el ultimo id tras el bucle ya que sera el primero de los generadores
+
+		j = i;
+
+		// Envia rol a los procesos generadores
+
+		for(i = j;i < (numGen + j); i++){
+
+			MPI_Send(&gen_tag, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+
+		}
+
+		
+
+
+		
+		// Sabra si se usan pistas o no segun argv[2]
+			
+		// Envía tipo de proceso
+			
+		// Envía longitud
+
+		int long_palabra;
+		long_palabra = strlen(palabra);
+		MPI_Bcast(&long_palabra, 1, MPI_INT, 0, MPI_COMM_WORLD); // Envía mensaje con la longitud a todos
+
+		// Inicializamos variable con el id del primer generador
+
+		int gen_r = numGen + 1;
+
+		// Envía la palabra a los Comprobadores y generador que le corresponde
+
+		for(i = 1; i <= numComp; i++){
+
+			MPI_Send(&palabra, long_palabra, MPI_CHAR, i, compr_tag, MPI_COMM_WORLD);
+			MPI_Send(&gen_r, 1, MPI_INT, i, compr_tag, MPI_COMM_WORLD);
+
+			// Reseteamos la variable para que vuelva a empezar si ha alcanzado el maximo id
+			// Sino sumamos uno
+
+			if(gen_r > nprocs ){
+
+				gen_r = numGen + 1;
+
+			}else{
+
+				gen_r++;
+
+			}
+		
+		}
+		
+		/* Espera a recibir de los Generadores
+		    -> Cadena con los caracteres ya encontrados
+				-> Si hay pistas, se distribuyen al resto de Generadores
+			-> Palabra ya encontrada
+		*/
+		
+		// Si palabra está encontrada manda terminar a Comprobadores y Generadores y recibe estadisticas
+		
+		
 	}else{
-		// Quizas habria que pensar un metodo que asegure la recepcion del Bcast 
-		// Pero en principio asi ya deberia funcionar
 
+		int longitud, rol;
 
+		// Recibe el rol del grupo al que pertenece. COMPROBADORES = 10 GENERADORES = 20
+
+		MPI_Recv(&rol, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+		// Recibe el Bcast ya que su id != sender 
+
+		MPI_Bcast(&longitud, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+		
+		
+		fprintf(stdout,"Soy el proceso %d y la longitud es %d\n",id, longitud);
+
+		// Recibe palabra y id del Generador asignado.
+
+		if(rol == 10){
+
+			int gen_asignado;
+			MPI_Recv(&palabra, longitud, MPI_CHAR, 0, rol, MPI_COMM_WORLD, &status);
+			MPI_Recv(&gen_asignado, 1, MPI_INT, 0, rol, MPI_COMM_WORLD, &status);
+			fprintf(stdout,"Soy un comprobador con el id: %d y la palabra es %s y me corresponde el generador: %d\n",id,palabra,gen_asignado);
+
+		}
 	}
 
 	MPI_Finalize();
@@ -81,37 +201,4 @@ int main(int argc, char ** argv){
 void fuerza_espera(unsigned long peso)
 {
   for (unsigned long i=1; i<1*peso; i++) sqrt(i);
-}
-
-// Asignacion de los procesos segun su id a un grupo. 
-// Comprobadores --> id = 1 hasta COMPROBADORES.
-// Generadores   --> id = COMPROBADORES + 1 hasta numGen
-void notificar(int numComp,int numGen,MPI_Comm_group group_world,MPI_Comm_group compr_group,MPI_Comm_group gen_group, MPI_Comm  comm_compr, MPI_Comm comm_gen){
-	
-	int i,j,compr[COMPROBADORES],gen[numGen];
-
-	INICIAR_ARRAY(0,compr,COMPROBADORES);
-	INICIAR_ARRAY(0,gen,numGen);
-
-	for(i = 1; i <= numComp; i++){
-		compr[i-1]= i;
-	}
-
-	j = numComp + 1;
-
-	for(i = 0; i < numGen; i++){
-		gen[i] = j;
-		j++;
-	}
-
-	// Establecemos los grupos
-
-	MPI_Group_incl(group_world,COMPROBADORES,compr,&compr_group);
-	MPI_Group_incl(group_world,numGen,gen,&gen_group);
-
-	//Establecemos los comunicadores
-
-	MPI_Comm_create(group_world,compr_group,&comm_compr);
-	MPI_Comm_create(group_world,gen_group,&comm_gen);
-
 }
