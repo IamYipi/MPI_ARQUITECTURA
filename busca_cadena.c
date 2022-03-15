@@ -21,7 +21,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 						argv[1] = numeroComprobadores
 						argv[2] = 0 si no hay pistas, 1 si hay pistas
 */
-	if(argc != 2){
+	if(argc != 3){
 		fprintf(stdout, "Error: Numero invalido de argumentos\n");
 		fprintf(stdout, "Usar: mpirun -np X [--oversubscribe] %s numero\n", argv[0]);
 		// Siendo "numero" el nº de procesos Comprobadores
@@ -88,7 +88,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		
 		// Si palabra está encontrada manda terminar a Comprobadores y Generadores y recibe estadisticas
 		
-		MPI_Finalize();
+		
 	}else{
 		int longitud;
 		
