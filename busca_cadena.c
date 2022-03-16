@@ -58,19 +58,21 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 	
 	/*Tareas a realizar por el Proceso 0*/
 	
-	if(id == 0){
-	
+	if(id == 0){	
+
 		// Se copia la palabra a descubrir en la variable
 
 		strcpy(palabra,"PRACTICAMPI2122");
 
 		/* El proceso E/S tiene en la variable palabra, la palabra correcta */
 		
-		printf("La longitud de la palabra es: %ld y hay %d comprobadores\n",
-							strlen(palabra), atoi(argv[1]));
-		
 		int numComp = atoi(argv[1]);
-		int numGen = nprocs - (numComp + 1); // +1 pq seria E/S 
+		int numGen = nprocs - (numComp + 1); // +1 pq seria E/S
+
+		// Primera salida por pantalla
+
+		fprintf(stdout,"\nNUMERO DE PROCESOS: Total %d: E/S: 1, Comprobadores: %d, Generadores: %d\n\n",nprocs,numComp,numGen);
+ 
 		
 		// Sabe cuantos Comprobadores existe, y si es posible seguir adelante con el nº de procs
 
@@ -93,24 +95,27 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		// Variables tag para establecer comunicaciones con cada grupo especifico
 
-		int compr_tag = 10;
-		int gen_tag   = 20;
+		int compr_tag = 0;
+		int gen_tag   = 1;
 
 		// Envia rol a los procesos comprobadores
 
+		fprintf(stdout,"NOTIFICACION TIPO\n");
+
 		for(i = 1; i <= numComp; i++){
 
+			fprintf(stdout, "0%d) %d\n", i, compr_tag);
 			MPI_Send(&compr_tag, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 
 		}
 
-		// Se guarda el ultimo id tras el bucle ya que sera el primero de los generadores
+		// Se guarda el primer id de los generadores que sera el total de comprobadores mas uno
 
-		j = i;
+		j = numComp + 1;
 
 		// Envia rol a los procesos generadores
 
-		for(i = j;i < (numGen + j); i++){
+		for(i = j;i < nprocs; i++){
 
 			MPI_Send(&gen_tag, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 
@@ -132,29 +137,54 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		// Inicializamos variable con el id del primer generador
 
-		int gen_r = numGen + 1;
+		j = numComp + 1;
 
-		// Envía la palabra a los Comprobadores y generador que le corresponde
+		// Inicializamos la variable con el id del primer comprobador
+
+		int comp = 1;
+
+		// Bucle para asignar comprobadores a los generadores
+
+		for(i = j; i < nprocs; i++){
+
+			fprintf(stdout, "0%d) %d\n", i, comp);
+
+			// Envía Comprobador que le corresponde a cada Generador
+
+			MPI_Send(&comp, 1, MPI_INT, i, gen_tag, MPI_COMM_WORLD);
+
+			// Si la variable alcanza el numero de comprobadores total, se resetea
+			// Sino aumenta uno
+
+			if( comp == numComp){
+
+				comp = 1;
+
+			}else{
+
+				comp++;
+
+			}
+
+		}
+
+		// Envia la palabra a los Comprobadores
 
 		for(i = 1; i <= numComp; i++){
 
 			MPI_Send(&palabra, long_palabra, MPI_CHAR, i, compr_tag, MPI_COMM_WORLD);
-			MPI_Send(&gen_r, 1, MPI_INT, i, compr_tag, MPI_COMM_WORLD);
-
-			// Reseteamos la variable para que vuelva a empezar si ha alcanzado el maximo id
-			// Sino sumamos uno
-
-			if(gen_r > nprocs ){
-
-				gen_r = numGen + 1;
-
-			}else{
-
-				gen_r++;
-
-			}
 		
 		}
+
+		fprintf(stdout, "\n\nNOTIFICACION PALABRA COMPROBADORES\n");
+
+		for(i = 1; i <= numComp; i++){
+
+			fprintf(stdout, "0%d) %s, %d\n", i, palabra, long_palabra);
+
+		}
+
+		fprintf(stdout, "\n");
 		
 		/* Espera a recibir de los Generadores
 		    -> Cadena con los caracteres ya encontrados
@@ -169,7 +199,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		int longitud, rol;
 
-		// Recibe el rol del grupo al que pertenece. COMPROBADORES = 10 GENERADORES = 20
+		// Recibe el rol del grupo al que pertenece. COMPROBADORES = 0 GENERADORES = 1
 
 		MPI_Recv(&rol, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
@@ -177,18 +207,27 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		MPI_Bcast(&longitud, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-		
-		
-		fprintf(stdout,"Soy el proceso %d y la longitud es %d\n",id, longitud);
+		// Comprobadores
 
-		// Reciben los COMPROBADORES la palabra y el id del Generador asignado.
+		if(rol == 0){
 
-		if(rol == 10){
+			// Palabra recibida
 
-			int gen_asignado;
 			MPI_Recv(&palabra, longitud, MPI_CHAR, 0, rol, MPI_COMM_WORLD, &status);
-			MPI_Recv(&gen_asignado, 1, MPI_INT, 0, rol, MPI_COMM_WORLD, &status);
-			fprintf(stdout,"Soy un comprobador con el id: %d y la palabra es %s y me corresponde el generador: %d\n",id,palabra,gen_asignado);
+
+		}
+
+		// Generadores
+
+		if(rol == 1){
+
+			// Variable que guarda el comprobador asignado al generador
+
+			int compr_assig;
+
+			// Recibe Comprobador asignado
+
+			MPI_Recv(&compr_assig, 1, MPI_INT, 0, rol, MPI_COMM_WORLD, &status);
 
 		}
 	}
