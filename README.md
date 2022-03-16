@@ -13,9 +13,9 @@ sudo apt-get install openmpi-bin
 
 
 ### PROCESO 0
-- [ ]  Creación Proceso 0 **E/S**, guardado de palabra y su respectiva longitud.
-- [ ]  Notificación *Rol* otros procesos
-- [ ]  Notificación *Palabra y Longitud* a los **Comprobadores**
+- [ X ]  Creación Proceso 0 **E/S**, guardado de palabra y su respectiva longitud.
+- [ X ]  Notificación *Rol* otros procesos
+- [ X ]  Notificación *Palabra y Longitud* a los **Comprobadores**
 - [ ]  Modo pistas o no pista
 - Quedarse a la espera de:
 - [ ]  Recibir cadena con caracteres ya encontrados
@@ -27,9 +27,9 @@ sudo apt-get install openmpi-bin
 
 ### RESTO PROCESOS
 #### COMPROBADORES
-- [ ]  Recibir **Longitud** de la Palabra
-- [ ]  Recibir que son *Comprobadores*
-- [ ]  Recibir **Palabra** a Comprobar
+- [ X ]  Recibir **Longitud** de la Palabra
+- [ X ]  Recibir que son *Comprobadores*
+- [ X ]  Recibir **Palabra** a Comprobar
 - Quedarse a la espera de:
 - [ ]  Proceso **0** le mande acabar
 - [ ]  Proceso **Generador** les mande una palabra
@@ -42,9 +42,9 @@ sudo apt-get install openmpi-bin
 - [ ] Envío estadísticas proceso 0
 
 ### GENERADORES
-- [ ]  Recibir **Longitud** de la Palabra
-- [ ]  Recibir que son *Generadores*
-- [ ]  Asignar Comprobador
+- [ X ]  Recibir **Longitud** de la Palabra
+- [ X ]  Recibir que son *Generadores*
+- [ X ]  Asignar Comprobador
 - Tener en cuenta:
 - [ ]  Recibo señal terminación
 - [ ]  Recibo pistas y actualizar cadena caracteres detectados
