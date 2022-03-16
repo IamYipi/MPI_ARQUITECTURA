@@ -44,21 +44,19 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &id);
 	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-
-	if(nprocs < 3){
-
-		fprintf(stdout,"Error: Numero invalido de procesos\n");
-		fprintf(stdout,"Finalizando programa...\n");
-
-		MPI_Finalize();
-
-		return 2;
-
-	}
 	
 	/*Tareas a realizar por el Proceso 0*/
 	
 	if(id == 0){	
+
+		if(nprocs < 3){
+
+			fprintf(stdout,"Error: Numero invalido de procesos\n");
+			fprintf(stdout,"Finalizando programa...\n");
+
+			MPI_Abort(MPI_COMM_WORLD, 1);
+			
+	}
 
 		// Se copia la palabra a descubrir en la variable
 
@@ -82,9 +80,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			fprintf(stdout,"Aumente el numero de procesos, o disminuya el numero de Comprobadores\n");
 			fprintf(stdout,"Finalizando programa...\n");
 
-			MPI_Finalize();
-
-			return 3;
+			MPI_Abort(MPI_COMM_WORLD, 2);
 
 		}
 		
@@ -115,7 +111,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		// Envia rol a los procesos generadores
 
-		for(i = j;i < nprocs; i++){
+		for(i = j; i < nprocs; i++){
 
 			MPI_Send(&gen_tag, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 
