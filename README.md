@@ -10,7 +10,7 @@ Primero de todo tener instalado **MPI**. Instalar con el comando:
 sudo apt-get install openmpi-bin
 ```
 ## TRABAJO
-
+- [ X ] Salida por pantalla como [Enunciado](EnunciadoPrácticaMP2122I.pdf)
 
 ### PROCESO 0
 - [ X ]  Creación Proceso 0 **E/S**, guardado de palabra y su respectiva longitud.
