@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <mpi.h>
 #include <math.h>
+#include <time.h>
 #include <string.h>
 #include <stdlib.h>
 #define PESO_COMPROBAR  5000000
@@ -10,6 +11,8 @@
 #define CHAR_NF 32 // Para marcar no encontrado (espacio, por simplificar)
 #define CHAR_MAX 127
 #define CHAR_MIN 33
+#define INICIAR_ARRAY(valor, array, tam) for (i=0; i<tam; i++) \
+                      				array[i] = valor;
 
 void fuerza_espera(unsigned long);
 
@@ -34,10 +37,12 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 	}
 
-	int id, nprocs;
+	int id, nprocs, winner;
 	char palabra[CHAR_MAX];
+	int pista = 0;
 
 	MPI_Status status;
+	MPI_Request request;
 
 	// Inicio MPI
 
@@ -138,6 +143,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		// Inicializamos la variable con el id del primer comprobador
 
 		int comp = 1;
+		int comprob[numComp + 1];
+		INICIAR_ARRAY(0, comprob, numComp + 1);
 
 		// Bucle para asignar comprobadores a los generadores
 
@@ -148,6 +155,10 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			// Envía Comprobador que le corresponde a cada Generador
 
 			MPI_Send(&comp, 1, MPI_INT, i, gen_tag, MPI_COMM_WORLD);
+
+			// Array para guardar a cada id(Comprobador) cuantos generadores le corresponde
+
+			comprob[comp]=comprob[comp]+1;
 
 			// Si la variable alcanza el numero de comprobadores total, se resetea
 			// Sino aumenta uno
@@ -181,14 +192,112 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		}
 
 		fprintf(stdout, "\n");
+
+		// Envia a los comprobadores cuantos Generadores les corresponde
+
+		int c;
+
+		for(i = 1; i <= numComp; i++){
+			c = comprob[i];
+			MPI_Send(&c,1,MPI_INT,i,compr_tag,MPI_COMM_WORLD);
+
+		}
 		
 		/* Espera a recibir de los Generadores
 		    -> Cadena con los caracteres ya encontrados
 				-> Si hay pistas, se distribuyen al resto de Generadores
 			-> Palabra ya encontrada
 		*/
+
+		// Variables flag y de todo
+
+		int encontrado = 0;
+		char palabra_aux[CHAR_MAX];
+		int idgen,idcomp;
+		int ngenex = 0;
+		int exit = 0;
+
+		fprintf(stdout,"\nBUSCANDO\n");
+
+		// Mientras numero de Generadores Salidos sea distinto del numero de Generadores total
+
+		while(ngenex != numGen){
+
+			// Recibe id y palabra de un Generador
+
+			MPI_Recv(&idgen,1,MPI_INT,MPI_ANY_SOURCE,gen_tag,MPI_COMM_WORLD,&status);
+			MPI_Recv(&palabra_aux, long_palabra, MPI_CHAR, idgen, gen_tag, MPI_COMM_WORLD, &status);
+
+			// Si ya esta encontrada la palabra se lo salta
+
+			if(encontrado != 1){
+
+				// Comparacion palabra recibida por el Generador
+
+				if(strcmp(palabra_aux,palabra) == 0){
+
+					// Guarda la variable flag encontrado y el id del Generador en winner
+
+					encontrado = 1;
+					winner = idgen;
+
+					// Muestra por pantalla ganador y palabra buscada y encontrada
+
+					fprintf(stdout,"\nPALABRA ENCONTRADA POR %d\n",winner);
+					fprintf(stdout,"BUSCADA...: %s\n",palabra);
+					fprintf(stdout,"ENCONTRADA: %s\n",palabra_aux);
+
+				}else{
+
+					// Imprime palabra que comprueba del generador
+
+					fprintf(stdout,"0%d) NO PISTA.....: %s\n",idgen,palabra_aux);
+
+				}
+			}
+
+			// -----------------------------------------------------------------------------------------------
+			// Si pista activada bucle for envio palabra a cada generador. NO IMPLEMENTADO MODO PISTA
+
+			if(pista == 1){
+
+				j = numComp + 1;
+
+				for(i = j; i < nprocs; i++){
+
+					MPI_Isend(&palabra_aux, long_palabra, MPI_CHAR, 80, gen_tag, MPI_COMM_WORLD,&request);
+
+				}
+
+			}
+			// -----------------------------------------------------------------------------------------------
+
+			// Envio al generador de comprobacion palabra y recepcion de confirmacion que deja de generar
+
+			MPI_Send(&encontrado,1,MPI_INT,idgen,gen_tag,MPI_COMM_WORLD);
+			MPI_Recv(&exit,1,MPI_INT,idgen,gen_tag,MPI_COMM_WORLD,&status);
+
+			// Si se sale sumamos uno a la variable que guarda cuantos generadores hay ya salidos
+
+			if(exit == 1){
+
+				ngenex++;
+
+			}
+
+			// Recibe el id del comprobador asignado al Generador que ha tramitado sus datos
+			// Envia flag exit indicandole al comprobador que un Generador suyo ha terminado o no
+
+			MPI_Recv(&idcomp,1,MPI_INT,idgen,gen_tag,MPI_COMM_WORLD,&status);
+			MPI_Send(&exit,1,MPI_INT,idcomp,compr_tag,MPI_COMM_WORLD);
+
+			// Reset flag exit
+
+			exit = 0;
+
+		}
 		
-		// Si palabra está encontrada manda terminar a Comprobadores y Generadores y recibe estadisticas
+		// Si palabra está encontrada recibe estadisticas
 		
 		
 	}else{
@@ -199,7 +308,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		MPI_Recv(&rol, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-		// Recibe el Bcast ya que su id != sender 
+		// Recibe el Bcast con la longitud de la palabra ya que su id != sender 
 
 		MPI_Bcast(&longitud, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -211,22 +320,200 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			MPI_Recv(&palabra, longitud, MPI_CHAR, 0, rol, MPI_COMM_WORLD, &status);
 
+			// Recibe numero de generadores que le corresponde al Comprobador
+
+			int numGenCorr = 0;
+
+			MPI_Recv(&numGenCorr,1,MPI_INT,0,rol,MPI_COMM_WORLD,&status);
+
+			char palabra_rcv[CHAR_MAX];
+			int encontrado = 0;
+			int genid, ext;
+			int genext = 0;
+			int i,j;
+			char a,b;
+
+			// Si no tiene asignados Generadores se lo salta
+
+			if(numGenCorr != 0){
+
+				// Mientras numero de Generadores que le corresponde sea distinto de los generadores
+				// que ya han finalizado de generar palabras
+
+				while(numGenCorr != genext){
+
+					// Recibe id del generador y despues la palabra
+
+					MPI_Recv(&genid,1,MPI_INT,MPI_ANY_SOURCE,id,MPI_COMM_WORLD,&status);
+					MPI_Recv(&palabra_rcv,longitud,MPI_CHAR,genid,genid,MPI_COMM_WORLD,&status);
+
+
+					// Bucle for que comprueba letra a letra la palabra recibida con la palabra buena
+
+					for(i = 0; i < longitud; i++){
+
+						a = palabra_rcv[i];
+						b = palabra[i];
+
+						if(a != b){
+
+							palabra_rcv[i] = CHAR_NF; // Sustitucion por espacio
+
+						}
+
+					}
+
+					// Forzamos espera para dar peso al calculo
+
+					//fuerza_espera(5);
+
+					// Envia los resultados de la comprobacion
+
+					MPI_Send(&palabra_rcv, longitud, MPI_CHAR, genid, genid, MPI_COMM_WORLD);
+
+
+					// Recibe si se sale o no por parte del proceso 0 E/S
+
+					MPI_Recv(&ext,1,MPI_INT,0,rol,MPI_COMM_WORLD,&status);
+
+					// Si indica que se sale, aumenta en uno la variable generadores salidos
+
+					if(ext == 1){
+
+						genext++;
+						ext = 0;
+
+					}	
+
+				}
+
+			}
+
+			// Envio estadisticas
+
 		}
 
 		// Generadores
 
 		if(rol == 1){
 
+			srand( id * time(NULL)); // Semilla en base al tiempo y el id de cada proceso.
+
 			// Variable que guarda el comprobador asignado al generador
 
 			int compr_assig;
+			char palabra_pist[CHAR_MAX];
 
 			// Recibe Comprobador asignado
 
 			MPI_Recv(&compr_assig, 1, MPI_INT, 0, rol, MPI_COMM_WORLD, &status);
 
+			// Variables flag
+
+			int encontrado = 0;
+			int exit = 0;
+
+			// Variable palabraAleatoria que se va obteniendo segun la generacion de palabras
+
+			char palabraAleatoria[longitud];
+
+			// Tener en cuenta que si se cambia la palabra a descubrir hay que añadir aqui los caracteres que posea al menos una vez.
+
+			char caracteresPosibles[] = "ABCDEFGHIJKLRRRMNIOQUTJAKSGHAJHGPFSGPfghafsghafsghafstjharfasdhjshdjh216531823612678&&!1281asdasdjahsdkjhadsljhaejuj";
+			
+
+			// Bucle envio palabras generadoras
+
+			int x = 0;
+			int i,j;
+			char a,b;
+			// Lleno el array de espacios vacios
+
+			INICIAR_ARRAY(CHAR_NF,palabraAleatoria,longitud);
+
+			while(encontrado != 1){
+				// Genera palabra aleatoria
+				// Segundo for del script de German, con este solo ya es suficiente y necesario
+
+				for( i = 0; i < longitud; i++){ // Este bucle solo generará en las posiciones que tengan un CHAR_NF, es decir, las erroneas
+					j = rand() % (strlen(caracteresPosibles)+1);
+					if(palabraAleatoria[i] == CHAR_NF){
+						palabraAleatoria[i] = caracteresPosibles[j];
+					}
+					//fuerza_espera(PESO_GENERAR);
+				}
+
+			
+
+				// Esto es como laboratorio de pruebas queda generar la palabra bien
+
+				//fuerza_espera(5);
+
+
+				// Primero enviamos id, despues se envia la palabra al comprobador asignado
+
+				MPI_Send(&id,1,MPI_INT,compr_assig,compr_assig,MPI_COMM_WORLD);
+				MPI_Send(&palabraAleatoria,longitud,MPI_CHAR,compr_assig,id,MPI_COMM_WORLD);
+
+				// Recibe la palabra con caracteres validos de su comprobador asignado
+
+				MPI_Recv(&palabraAleatoria,longitud,MPI_CHAR,compr_assig,id,MPI_COMM_WORLD,&status);
+
+
+				// Envio id y palabra a proceso 0 E/S para comprobar si se termina
+
+				MPI_Send(&id, 1, MPI_INT,0,rol,MPI_COMM_WORLD);
+				MPI_Send(&palabraAleatoria, longitud, MPI_CHAR, 0, rol, MPI_COMM_WORLD);
+
+				// MPI_Recv(&palabra,longitud,MPI_CHAR,0,0,MPI_COMM_WORLD,&status); //Modo pista
+
+
+				// Recibe flag encontrado para salir del bucle
+
+				MPI_Recv(&encontrado, 1, MPI_INT, 0,rol, MPI_COMM_WORLD,&status);
+
+				if(encontrado == 1){
+
+					exit = 1;
+
+				}
+
+				// Envio resultado a proceso 0 E/S si termina su proceso o sigue
+				// Despues envia el id del comprobador que tiene asignado, tambien al proceso 0 E/S
+
+				MPI_Send(&exit,1,MPI_INT,0,rol,MPI_COMM_WORLD);
+				MPI_Send(&compr_assig,1,MPI_INT,0,rol,MPI_COMM_WORLD);
+
+
+				// PISTA NO IMPLEMENTADO
+				// ----------------------------------------------------------------------------
+
+				if(pista == 1){
+
+					MPI_Irecv(&palabra_pist,longitud,MPI_CHAR,0,80,MPI_COMM_WORLD,&request);
+					
+					for(i = 0; i < longitud; i++){
+
+						a = palabra_pist[i];
+						b = palabra[i];
+
+						if(a != b){
+
+							palabra[i] = a; // Sustitucion por letra pista
+
+						}
+					}
+
+				}
+				// ------------------------------------------------------------------------------	
+
+			}
+
 		}
 	}
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
 
 	MPI_Finalize();
 	return 0;	
