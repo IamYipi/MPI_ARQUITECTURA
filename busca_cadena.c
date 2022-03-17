@@ -5,6 +5,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #define PESO_COMPROBAR  5000000
 #define PESO_GENERAR    10000000
 #define CHAR_NF 32 // Para marcar no encontrado (espacio, por simplificar)
@@ -23,6 +24,9 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 						argv[1] = numeroComprobadores
 						argv[2] = 0 si no hay pistas, 1 si hay pistas
 */
+
+
+//-> Comprobacion de numero de argumentos
 	if(argc != 3){
 
 		fprintf(stdout, "Error: Numero invalido de argumentos\n");
@@ -34,12 +38,15 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 	}
 
-	int id, nprocs;
-	char palabra[CHAR_MAX];
+	int id, nprocs; //id -> identificador del proceso
+			//nprocs -> numero de prcesos
+			
+	char palabra[CHAR_MAX]; //->Array con longitud maxima de la palabra
 
-	MPI_Status status;
+	MPI_Status status;// ->tipo de dato utilizado para guardar informacion sobre operaciones de recepcion de mensajes
 
 	// Inicio MPI
+	//->Funciones necesarias para iniciar un programa MPI
 
 	MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD, &id);
@@ -47,14 +54,18 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 	
 	/*Tareas a realizar por el Proceso 0*/
 	
+	//-> porceso 0 = proceso E/S = proceso principal
+	
+	
+	
 	if(id == 0){	
-
+	//-> Si hay menos de 3 procesos no se puede ejecutar porque tiene que haber 1 proc E/S y minimo 1 proc COMPROBADOR y 1 proc GENERADOR 
 		if(nprocs < 3){
 
 			fprintf(stdout,"Error: Numero invalido de procesos\n");
 			fprintf(stdout,"Finalizando programa...\n");
 
-			MPI_Abort(MPI_COMM_WORLD, 1);
+			MPI_Abort(MPI_COMM_WORLD, 1); //->Aborta el programa 
 			
 	}
 
@@ -74,6 +85,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		
 		// Sabe cuantos Comprobadores existe, y si es posible seguir adelante con el nº de procs
 
+		// ->Si hay por ejemplo 7 procesos, y 6 son comprobadores: 1 E/S 6 COMPS, no hya generadores y hay que abortar
 		if(numGen < 1){
 
 			fprintf(stdout,"Error: no hay ningun Generador\n");
@@ -91,8 +103,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		// Variables tag para establecer comunicaciones con cada grupo especifico
 
-		int compr_tag = 0;
-		int gen_tag   = 1;
+		int compr_tag = 0; //->Rol procesos COMP
+		int gen_tag   = 1; //->Rol procesos GEN
 
 		// Envia rol a los procesos comprobadores
 
@@ -100,8 +112,9 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		for(i = 1; i <= numComp; i++){
 
-			fprintf(stdout, "0%d) %d\n", i, compr_tag);
+			fprintf(stdout, "0%d) %d\n", i, compr_tag); // ->se asigna el rol a los pprocesos comprobadores
 			MPI_Send(&compr_tag, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+			// ->Enviamos un mensaje a cada proceso comprobador 
 
 		}
 
@@ -117,7 +130,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		}
 
-		
+		//->Enviamos un mensaje a los procesos generadores
 
 
 		
@@ -129,6 +142,12 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		int long_palabra;
 		long_palabra = strlen(palabra);
+		
+		
+ 		
+ 
+		
+		// ->guardamos en long_palabra la longitud de la palabra a adivinar
 		MPI_Bcast(&long_palabra, 1, MPI_INT, 0, MPI_COMM_WORLD); // Envía mensaje con la longitud a todos
 
 		// Inicializamos variable con el id del primer generador
@@ -146,6 +165,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			fprintf(stdout, "0%d) %d\n", i, comp);
 
 			// Envía Comprobador que le corresponde a cada Generador
+			
+			
 
 			MPI_Send(&comp, 1, MPI_INT, i, gen_tag, MPI_COMM_WORLD);
 
@@ -191,7 +212,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		// Si palabra está encontrada manda terminar a Comprobadores y Generadores y recibe estadisticas
 		
 		
-	}else{
+	}else{ //-> otro proceso que no es el principal E/S
 
 		int longitud, rol;
 
@@ -216,7 +237,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		// Generadores
 
 		if(rol == 1){
-
+		
+			srand(id*70831548*time(NULL));
 			// Variable que guarda el comprobador asignado al generador
 
 			int compr_assig;
@@ -224,6 +246,24 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			// Recibe Comprobador asignado
 
 			MPI_Recv(&compr_assig, 1, MPI_INT, 0, rol, MPI_COMM_WORLD, &status);
+			
+		
+		int i;
+		char cadena_aleatoria[longitud];
+ 		char cad[]="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+
+ 		//printf("*******CADENA ALEATORIA*******\n");
+ 		
+		
+ 		for(i=0;i<longitud;i++){
+ 			
+ 			cadena_aleatoria[i]=cad[rand()%(sizeof(cad)-1)];
+ 	
+			printf("%c",cadena_aleatoria[i]);   
+			
+
+  		}
+  		printf("\n");
 
 		}
 	}
