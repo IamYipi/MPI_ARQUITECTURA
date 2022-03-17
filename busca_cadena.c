@@ -219,8 +219,16 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		// Variables tiempo cada grupo de procesos y comprobaciones efectuadas por cada comprobador
 
+			// Generadores 
+
 		double tiempoGeneradores[numGen];
+		double tiempoGeneradoresEspera[numGen];
+		int iteracionesGen[numGen];
+
+			// Comprobadores
+
 		double tiempoComprobadores[numComp+1];
+		double tiempoComp[numComp+1];
 		int comprobaciones[numComp+1];
 
 		// Comienzo busqueda
@@ -229,6 +237,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		// Mientras numero de Generadores Salidos sea distinto del numero de Generadores total
 		// Bucle proceso 0
+
+		tiempoTotal = MPI_Wtime();
 
 		while(ngenex != numGen){
 
@@ -261,7 +271,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 					// Imprime palabra que comprueba del generador
 
-					fprintf(stdout,"0%d) NO PISTA.....: %s\n",idgen,palabra_aux);
+					fprintf(stdout,"0%d)\t NO PISTA.....:\t %s\n",idgen,palabra_aux);
 
 				}
 			}
@@ -314,12 +324,14 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		ngenex = 0;
 
-		fprintf(stdout,"\nESTADISTICAS\n");
+		fprintf(stdout,"\n-----------------------------------------ESTADISTICAS--------------------------------------------\n");
 
 		while(ngenex != numGen){
 
 			MPI_Recv(&idgen,1,MPI_INT,MPI_ANY_SOURCE,gen_tag,MPI_COMM_WORLD,&status);
+			MPI_Recv(&iteracionesGen[idgen],1,MPI_INT,idgen,gen_tag,MPI_COMM_WORLD,&status);
 			MPI_Recv(&tiempoGeneradores[idgen],1,MPI_DOUBLE,idgen,gen_tag,MPI_COMM_WORLD,&status);
+			MPI_Recv(&tiempoGeneradoresEspera[idgen],1,MPI_DOUBLE,idgen,gen_tag,MPI_COMM_WORLD,&status);
 			ngenex++;
 
 		}
@@ -332,6 +344,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			MPI_Recv(&idcomp,1,MPI_INT,MPI_ANY_SOURCE,compr_tag,MPI_COMM_WORLD,&status);
 			MPI_Recv(&comprobaciones[idcomp],1,MPI_INT,idcomp,compr_tag,MPI_COMM_WORLD,&status);
 			MPI_Recv(&tiempoComprobadores[idcomp],1,MPI_DOUBLE,idcomp,compr_tag,MPI_COMM_WORLD,&status);
+			MPI_Recv(&tiempoComp[idcomp],1,MPI_DOUBLE,idcomp,compr_tag,MPI_COMM_WORLD,&status);
 			ncompex++;
 
 		}
@@ -339,7 +352,48 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		tiempoTotal = MPI_Wtime() - tiempoTotal;
 
 		// Imprimo por pantalla resultados estadisticos
+
+		// GENERADORES
+
+		fprintf(stdout,"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~GENERADORES~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+		fprintf(stdout,"\n*************************************************************************************************\n");
+		fprintf(stdout,"|\tIteraciones \t|\t TiempoTotal \t|\tTiempoGenerado  |\tTiempoEspera\t|\n");
+		fprintf(stdout,"|-----------------------------------------------------------------------------------------------|\n");
 		
+		j = numComp + 1;
+		int itTotal = 0;
+
+		for(i = 0; i < numGen; i++){
+			itTotal += iteracionesGen[j];
+			fprintf(stdout,"|0%d) %10d \t| %15f \t| %15f \t| %15f \t|\n",j,iteracionesGen[j],tiempoGeneradores[j],tiempoGeneradores[j]- tiempoGeneradoresEspera[j],tiempoGeneradoresEspera[j]);
+			j++;
+		}
+
+		fprintf(stdout,"|-----------------------------------------------------------------------------------------------|\n");
+		fprintf(stdout,"| Iteraciones Totales: %d\n",itTotal);
+
+		// COMPROBADORES
+		itTotal = 0;
+
+		fprintf(stdout,"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~COMPROBADORES~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+		fprintf(stdout,"\n*************************************************************************\n");
+		fprintf(stdout,"|\tIteraciones \t|\t TiempoTotal \t|    TiempoComprobado\t|\n");
+		fprintf(stdout,"|-----------------------------------------------------------------------|\n");
+
+		for (i = 1; i <= numComp; i++){
+			itTotal += comprobaciones[i];
+			fprintf(stdout,"|0%d) %10d \t| %15f \t| %15f \t|\n",i,comprobaciones[i],tiempoComprobadores[i],tiempoComp[i]);
+		}
+		fprintf(stdout,"|-----------------------------------------------------------------------|\n");
+		fprintf(stdout,"| Iteraciones Totales: %d\n",itTotal);
+
+		// ESTADISTICAS TOTALES DE PROCESO 0
+
+		fprintf(stdout,"\n>------------------------ ESTADISTICAS TOTALES --------------------------<\n");
+		fprintf(stdout,"| Numero de procesos: 	%d\n",nprocs);
+		fprintf(stdout,"| Tiempo procesamiento: %f\n",tiempoTotal);
+		fprintf(stdout,"\n>------------------------------ FIN  -------------------------------<\n");
+
 	}else{
 
 		int longitud, rol;
@@ -375,10 +429,12 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Variables estadisticas
 
-			double tiempoComprob;
+			double tiempoComprob, tiempoAux;
+			double tiempoEspecifico = 0;
 			int numComprobaciones = 0;
 
 			// Inicio tiempo Comprobador
+
 			tiempoComprob = MPI_Wtime();
 
 			// Si no tiene asignados Generadores se lo salta
@@ -398,6 +454,10 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 					// Bucle for que comprueba letra a letra la palabra recibida con la palabra buena
 
+					// Tiempo Auxiliar para sumar al total de tiempo especifico en comprobaciones
+
+					tiempoAux = MPI_Wtime();
+
 					for(i = 0; i < longitud; i++){
 
 						a = palabra_rcv[i];
@@ -411,11 +471,19 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 					}
 
+					// Variable que guarda cuantas veces comprueba 
+
 					numComprobaciones++;
 
 					// Forzamos espera para dar peso al calculo
 
-					//fuerza_espera(5);
+					fuerza_espera(PESO_COMPROBAR);
+
+					// Fin tiempo auxiliar y lo sumamos a una variable que acumula tiempos
+
+					tiempoAux = MPI_Wtime() - tiempoAux;
+
+					tiempoEspecifico += tiempoAux;
 
 					// Envia los resultados de la comprobacion
 
@@ -448,6 +516,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			MPI_Send(&id,1,MPI_INT,0,rol,MPI_COMM_WORLD);
 			MPI_Send(&numComprobaciones,1,MPI_INT,0,rol,MPI_COMM_WORLD);
 			MPI_Send(&tiempoComprob,1,MPI_DOUBLE,0,rol,MPI_COMM_WORLD);
+			MPI_Send(&tiempoEspecifico,1,MPI_DOUBLE,0,rol,MPI_COMM_WORLD);
 
 		}
 
@@ -464,7 +533,10 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Variables estadistica tiempo
 
-			double tiempoGen;
+			double tiempoGen, tiempoAux;
+			double tiempoEsp = 0;
+
+			int iteraciones = 0;
 
 			// Recibe Comprobador asignado
 
@@ -486,9 +558,9 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Bucle envio palabras generadoras
 
-			int x = 0;
 			int i,j;
 			char a,b;
+
 			// Lleno el array de espacios vacios
 
 			INICIAR_ARRAY(CHAR_NF,palabraAleatoria,longitud);
@@ -498,6 +570,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			tiempoGen = MPI_Wtime();
 
 			while(encontrado != 1){
+
 				// Genera palabra aleatoria
 				// Segundo for del script de German, con este solo ya es suficiente y necesario
 
@@ -509,14 +582,16 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 						palabraAleatoria[i] = caracteresPosibles[j];
 
-					}
-
-					//fuerza_espera(PESO_GENERAR);
-
+					}				
 				}
 
-				//fuerza_espera(5);
+				// Forzamos espera
 
+				fuerza_espera(PESO_GENERAR);
+
+				// Variable que guarda el numero de veces que itera el generador
+
+				iteraciones++;
 
 				// Primero enviamos id, despues se envia la palabra al comprobador asignado
 
@@ -525,8 +600,10 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 				// Recibe la palabra con caracteres validos de su comprobador asignado
 
+				tiempoAux = MPI_Wtime();
 				MPI_Recv(&palabraAleatoria,longitud,MPI_CHAR,compr_assig,id,MPI_COMM_WORLD,&status);
-
+				tiempoAux = MPI_Wtime() - tiempoAux;
+				tiempoEsp += tiempoAux;
 
 				// Envio id y palabra a proceso 0 E/S para comprobar si se termina
 
@@ -587,7 +664,9 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			// Envio estadisticas generadores al proceso cero
 
 			MPI_Send(&id,1,MPI_INT,0,rol,MPI_COMM_WORLD);
+			MPI_Send(&iteraciones,1,MPI_INT,0,rol,MPI_COMM_WORLD);
 			MPI_Send(&tiempoGen,1,MPI_DOUBLE,0,rol,MPI_COMM_WORLD);
+			MPI_Send(&tiempoEsp,1,MPI_DOUBLE,0,rol,MPI_COMM_WORLD);
 
 		}
 	}
