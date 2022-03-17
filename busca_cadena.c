@@ -40,9 +40,12 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 	int id, nprocs, winner;
 	char palabra[CHAR_MAX];
 	int pista = 0;
+	int flag = 0;
+	double tiempoTotal;
 
 	MPI_Status status;
 	MPI_Request request;
+
 
 	// Inicio MPI
 
@@ -122,10 +125,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		}
 
-		
-
-
-		
 		// Sabra si se usan pistas o no segun argv[2]
 			
 		// Envía tipo de proceso
@@ -158,7 +157,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Array para guardar a cada id(Comprobador) cuantos generadores le corresponde
 
-			comprob[comp]=comprob[comp]+1;
+			comprob[comp] = comprob[comp] + 1;
 
 			// Si la variable alcanza el numero de comprobadores total, se resetea
 			// Sino aumenta uno
@@ -198,6 +197,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		int c;
 
 		for(i = 1; i <= numComp; i++){
+
 			c = comprob[i];
 			MPI_Send(&c,1,MPI_INT,i,compr_tag,MPI_COMM_WORLD);
 
@@ -217,13 +217,23 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		int ngenex = 0;
 		int exit = 0;
 
+		// Variables tiempo cada grupo de procesos y comprobaciones efectuadas por cada comprobador
+
+		double tiempoGeneradores[numGen];
+		double tiempoComprobadores[numComp+1];
+		int comprobaciones[numComp+1];
+
+		// Comienzo busqueda
+
 		fprintf(stdout,"\nBUSCANDO\n");
 
 		// Mientras numero de Generadores Salidos sea distinto del numero de Generadores total
+		// Bucle proceso 0
 
 		while(ngenex != numGen){
 
 			// Recibe id y palabra de un Generador
+
 
 			MPI_Recv(&idgen,1,MPI_INT,MPI_ANY_SOURCE,gen_tag,MPI_COMM_WORLD,&status);
 			MPI_Recv(&palabra_aux, long_palabra, MPI_CHAR, idgen, gen_tag, MPI_COMM_WORLD, &status);
@@ -298,7 +308,37 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		}
 		
 		// Si palabra está encontrada recibe estadisticas
+		// Primero recibe estadisticas de Generadores, pues son los primeros en salir
+
+		MPI_Bcast(&flag, 1, MPI_INT, 0, MPI_COMM_WORLD); // Aseguramos que todos han finalizado
+
+		ngenex = 0;
+
+		fprintf(stdout,"\nESTADISTICAS\n");
+
+		while(ngenex != numGen){
+
+			MPI_Recv(&idgen,1,MPI_INT,MPI_ANY_SOURCE,gen_tag,MPI_COMM_WORLD,&status);
+			MPI_Recv(&tiempoGeneradores[idgen],1,MPI_DOUBLE,idgen,gen_tag,MPI_COMM_WORLD,&status);
+			ngenex++;
+
+		}
+
 		
+		int ncompex = 0;
+
+		while(ncompex != numComp){
+
+			MPI_Recv(&idcomp,1,MPI_INT,MPI_ANY_SOURCE,compr_tag,MPI_COMM_WORLD,&status);
+			MPI_Recv(&comprobaciones[idcomp],1,MPI_INT,idcomp,compr_tag,MPI_COMM_WORLD,&status);
+			MPI_Recv(&tiempoComprobadores[idcomp],1,MPI_DOUBLE,idcomp,compr_tag,MPI_COMM_WORLD,&status);
+			ncompex++;
+
+		}
+
+		tiempoTotal = MPI_Wtime() - tiempoTotal;
+
+		// Imprimo por pantalla resultados estadisticos
 		
 	}else{
 
@@ -333,6 +373,14 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			int i,j;
 			char a,b;
 
+			// Variables estadisticas
+
+			double tiempoComprob;
+			int numComprobaciones = 0;
+
+			// Inicio tiempo Comprobador
+			tiempoComprob = MPI_Wtime();
+
 			// Si no tiene asignados Generadores se lo salta
 
 			if(numGenCorr != 0){
@@ -363,6 +411,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 					}
 
+					numComprobaciones++;
+
 					// Forzamos espera para dar peso al calculo
 
 					//fuerza_espera(5);
@@ -389,7 +439,15 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			}
 
+			tiempoComprob = MPI_Wtime() - tiempoComprob;
+
+			MPI_Bcast(&flag, 1, MPI_INT, 0, MPI_COMM_WORLD); // Asegura finalizacion
+
 			// Envio estadisticas
+
+			MPI_Send(&id,1,MPI_INT,0,rol,MPI_COMM_WORLD);
+			MPI_Send(&numComprobaciones,1,MPI_INT,0,rol,MPI_COMM_WORLD);
+			MPI_Send(&tiempoComprob,1,MPI_DOUBLE,0,rol,MPI_COMM_WORLD);
 
 		}
 
@@ -403,6 +461,10 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			int compr_assig;
 			char palabra_pist[CHAR_MAX];
+
+			// Variables estadistica tiempo
+
+			double tiempoGen;
 
 			// Recibe Comprobador asignado
 
@@ -431,21 +493,27 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			INICIAR_ARRAY(CHAR_NF,palabraAleatoria,longitud);
 
+			// Inicializa tiempo
+
+			tiempoGen = MPI_Wtime();
+
 			while(encontrado != 1){
 				// Genera palabra aleatoria
 				// Segundo for del script de German, con este solo ya es suficiente y necesario
 
 				for( i = 0; i < longitud; i++){ // Este bucle solo generará en las posiciones que tengan un CHAR_NF, es decir, las erroneas
+					
 					j = rand() % (strlen(caracteresPosibles)+1);
+
 					if(palabraAleatoria[i] == CHAR_NF){
+
 						palabraAleatoria[i] = caracteresPosibles[j];
+
 					}
+
 					//fuerza_espera(PESO_GENERAR);
+
 				}
-
-			
-
-				// Esto es como laboratorio de pruebas queda generar la palabra bien
 
 				//fuerza_espera(5);
 
@@ -509,8 +577,22 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			}
 
+			// Tiempo de generador
+
+			tiempoGen = MPI_Wtime() - tiempoGen;
+
+			MPI_Bcast(&flag, 1, MPI_INT, 0, MPI_COMM_WORLD); //Asegura finalizacion
+
+
+			// Envio estadisticas generadores al proceso cero
+
+			MPI_Send(&id,1,MPI_INT,0,rol,MPI_COMM_WORLD);
+			MPI_Send(&tiempoGen,1,MPI_DOUBLE,0,rol,MPI_COMM_WORLD);
+
 		}
 	}
+
+	// Se quedan esperando procesos generadores y comprobadores hasta que proceso 0 termine de imprimir en pantalla
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
