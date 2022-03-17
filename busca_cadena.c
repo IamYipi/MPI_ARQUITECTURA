@@ -5,6 +5,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #define PESO_COMPROBAR  5000000
 #define PESO_GENERAR    10000000
 #define CHAR_NF 32 // Para marcar no encontrado (espacio, por simplificar)
@@ -36,7 +37,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 	int id, nprocs;
 	char palabra[CHAR_MAX];
-
 	MPI_Status status;
 
 	// Inicio MPI
@@ -117,9 +117,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		}
 
-		
-
-
+		// Asignacion de roles
 		
 		// Sabra si se usan pistas o no segun argv[2]
 			
@@ -210,7 +208,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			// Palabra recibida
 
 			MPI_Recv(&palabra, longitud, MPI_CHAR, 0, rol, MPI_COMM_WORLD, &status);
-
+			
 		}
 
 		// Generadores
@@ -218,12 +216,82 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		if(rol == 1){
 
 			// Variable que guarda el comprobador asignado al generador
-
-			int compr_assig;
+			
+			srand( id * time(NULL)); // Semilla en base al tiempo y el id de cada proceso.
+			int compr_assig,i;
 
 			// Recibe Comprobador asignado
 
 			MPI_Recv(&compr_assig, 1, MPI_INT, 0, rol, MPI_COMM_WORLD, &status);
+			
+			// Conozco id, longitud, compr_assig
+			
+			char palabraAleatoria[longitud];
+			char caracteresPosibles[] = "ABCDEFGHIJKLMNIOQUJAKSGHAJHGFSGfghafsghafsghafstjharfasdhjshdjh216531823612678&&!1281asdasdjahsdkjhadsljhaejuj";
+			
+
+			/* Genera combinación aleatoria
+					-> Ten en cuenta ya detectados
+					-> random gen SEED
+					-> Espera forzada
+			*/
+			int j;
+			
+			for( i = 0; i < longitud; i++){
+				j= rand() % (strlen(caracteresPosibles)+1) ;
+				palabraAleatoria[i] = caracteresPosibles[j];
+				fuerza_espera(PESO_GENERAR);
+			}
+
+
+			for( i = 0; i < longitud; i++){
+				fprintf(stderr,"%c",palabraAleatoria[i]);
+			}
+			fprintf(stderr,"\n");
+			
+			
+			// El tramo entre asteriscos será un bucle hasta que E/S mande, esto se hará con un iProbe
+// *******************************************************************************************************			
+			// Consulta al comprobador
+			
+//			MPI_Send(&palabraAleatoria, 1, MPI_CHAR, compr_assig, 1, MPI_COMM_WORLD); // TODO Tengo dudas de este send
+			
+			/* 
+				Recibo de compr una palabra, mantengo las que sean iguales a las que envié
+		 			->Si la respuesta tiene nuevos caracteres acertados, mando a E/S
+		 	 			Pista o no, pero ya depende del E/S 
+			*/
+			
+			char palabraCorregida[longitud], palabraCorregidaAnterior[longitud];			
+			
+			// MSG_RCV PALABRACORREGIDA 
+			
+			if( strcmp(palabraCorregida,palabraCorregidaAnterior) != 0){ // TODO Quizas habria que ignorar la primera iteracion y asi no notificar al E/S
+				// Envío mensaje a E/S
+				// MPI_Send(&palabraCorregida, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+				strcpy(palabraCorregidaAnterior,palabraCorregida);
+			}
+			
+			strcpy(palabraAleatoria,palabraCorregida); // Ahora en palabraAleatoria tengo la palabra corregida, con CHAR_NF en los fallados, y los acertados OK
+			
+
+			for( i = 0; i < longitud; i++){ // Este bucle solo generará en las posiciones que tengan un CHAR_NF, es decir, las erroneas
+				j= rand() % (strlen(caracteresPosibles)+1) ;
+				if(palabraAleatoria[i] == CHAR_NF){
+					palabraAleatoria[i] = caracteresPosibles[j];
+				}
+				fuerza_espera(PESO_GENERAR);
+			}
+			
+			for( i = 0; i < longitud; i++){
+				fprintf(stderr,"%c",palabraAleatoria[i]);
+			}
+			fprintf(stderr,"\n");
+// *******************************************************************************************************
+			
+			// E/S puede mandar una pista
+			
+			// Una vez mandado acabar, mandar estadisticas a E/S
 
 		}
 	}

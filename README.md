@@ -49,9 +49,9 @@ sudo apt-get install openmpi-bin
 - [ ]  Recibo señal terminación
 - [ ]  Recibo pistas y actualizar cadena caracteres detectados
 - Función:
-- [ ]  Generar palabra de longitud indicada (Cuidado semilla)
-- [ ]  Tener en cuenta caracteres ya encontrados
-- [ ]  **FORZAR ESPERA PARA DAR PESO AL CALCULO**
+- [ X ]  Generar palabra de longitud indicada (Cuidado semilla)
+- [ X ]  Tener en cuenta caracteres ya encontrados
+- [ X ]  **FORZAR ESPERA PARA DAR PESO AL CALCULO**
 - [ ]  Mandar Consulta proceso Comprobador que se le asignó
 - [ ]  Recibir respuesta y **actualizar** cadena de caracteres encontrados
 - Tras recibir señal terminación:
