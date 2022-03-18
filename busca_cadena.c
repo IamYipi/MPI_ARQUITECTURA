@@ -1,5 +1,16 @@
-// Compilar --> mpicc busca_cadena.c -o busca_cadena -lm
-// Ejecutar --> mpirun -np 3 --oversubscribe busca_cadena 1 1
+/* 
+ Compilar --> mpicc busca_cadena.c -o busca_cadena -lm
+ Ejecutar --> mpirun -np 3 --oversubscribe busca_cadena 1 1
+
+  ++++++++++++++++++++++++++++++++
+  + Arquitectura de computadores +
+  +			PAB-3                + 
+  +  Lidia Alaejos Herrero       +
+  +  Iván Gutiérrez Gil			 +
+  +  Germán Francés Tostado      +
+  +  Javier García Pechero       +
+  ++++++++++++++++++++++++++++++++
+*/
 #include <stdio.h>
 #include <mpi.h>
 #include <math.h>
@@ -18,9 +29,6 @@ void fuerza_espera(unsigned long);
 
 int main(int argc, char ** argv){
 /*
-ejemplo compilacion: 	mpicc busca_cadena.c -o nombre_ejecutable -lm
-ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
-	 
 	 argumentos: 
 	 					argv[0] = nombre_ejecutable
 						argv[1] = numeroComprobadores
@@ -54,7 +62,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 	MPI_Comm_rank(MPI_COMM_WORLD, &id);
 	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
 	
-	/*Tareas a realizar por el Proceso 0*/
+	/* Tareas a realizar por el Proceso 0 */
 	
 	if(id == 0){	
 
@@ -65,17 +73,17 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			MPI_Abort(MPI_COMM_WORLD, 1);
 			
-	}
+		}
 
 		// Se copia la palabra a descubrir en la variable
 		// El proceso E/S tiene en la variable palabra, la palabra correcta
 
-		strcpy(palabra,"PRACTICAMPI2122");
+		strcpy(palabra,"ABCDEFGHIJKLRRGPFSPRACTICAMPI2122hjash&&YhdBcLwFdSHHsdyhjkylkudaghkdjawgdalwADasdhjshdjh21658&&!1281asdasdjahsdkjhadsljhaejuj");
 
 		// Dependiendo del nprocs y del nºComprobadores, habrá un nºGeneradores
 		
 		int numComp = atoi(argv[1]);
-		int numGen = nprocs - (numComp + 1); // +1 pq seria E/S
+		int numGen = nprocs - (numComp + 1); // +1 que sería el E/S
 		int pista = atoi(argv[2]);
 
 		// Primera salida por pantalla
@@ -126,11 +134,11 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		}
 			
-		// Envía longitud
+		// Envía longitud a todos los procesos mediante un Broadcast
 
 		int long_palabra;
 		long_palabra = strlen(palabra);
-		MPI_Bcast(&long_palabra, 1, MPI_INT, 0, MPI_COMM_WORLD); // Envía mensaje con la longitud a todos
+		MPI_Bcast(&long_palabra, 1, MPI_INT, 0, MPI_COMM_WORLD); 
 
 		// Inicializamos variable con el id del primer generador
 
@@ -157,7 +165,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			comprob[comp] = comprob[comp] + 1;
 
 			// Si la variable alcanza el numero de comprobadores total, se resetea
-			// Sino aumenta uno
+			// Sino, aumenta uno	
 			
 			comp == numComp ? comp = 1 : comp++;
 
@@ -206,6 +214,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		int idgen,idcomp;
 		int ngenex = 0;
 		int exit = 0;
+		int iguales = 0;
 
 		// Variables tiempo cada grupo de procesos y comprobaciones efectuadas por cada comprobador
 
@@ -241,9 +250,19 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			if(encontrado != 1){
 
-				// Comparacion palabra recibida por el Generador
+				// Comparacion palabra recibida por el Generador, caracter a caracter para evitar casos especiales
+				// donde falla el strcmp(), Si tienen iguales un caracter, aumenta el contador. Si el contador es 
+				// igual a la long_palabra, son la misma palabra
+				
+				for( i = 0; i < long_palabra; i++){
 
-				if(strcmp(palabra_aux,palabra) == 0){
+					if(palabra_aux[i] == palabra[i]){
+						iguales++;
+					}
+				}
+
+
+				if(iguales == long_palabra){
 
 					// Guarda la variable flag encontrado y el id del Generador en winner
 
@@ -307,21 +326,19 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 					}
 					no_vacio = 0;
 				}
+				iguales = 0;
 			}
 
 			// MODO PISTAAAAAAAAAAA 
 			// -----------------------------------------------------------------------------------------------
 			// Si pista activada bucle for envio palabra a cada generador.IMPLEMENTADO MODO PISTA
-			// Envia a cada buzon correspondiente a cada generador la palabra
 
 			if(pista == 1){
 
 				j = numComp + 1;
 
 				for(i = j; i < nprocs; i++){
-
 					MPI_Isend(&palabra_aux, long_palabra, MPI_CHAR, i, 80+i, MPI_COMM_WORLD,&request);
-
 				}
 
 			}
@@ -504,7 +521,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 						if(a != b){
 
-							palabra_rcv[i] = CHAR_NF; // Sustitucion por espacio
+							palabra_rcv[i] = CHAR_NF; // Sustitucion del error por el caracter espacio
 
 						}
 
@@ -542,7 +559,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 					}	
 
-				}
+				}// Fin while
 
 			}
 
@@ -563,7 +580,11 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		if(rol == 1){
 
-			srand( id * 7092); // Semilla en base al tiempo y el id de cada proceso.
+			srand( id * 7094); 
+			/* 	Semilla arbitraria según el id de cada proceso.
+				La semilla no la tomamos en base al tiempo para que sean resultados similares
+				entre ejecuciones, y así sacar un estudio del rendimiento mejor. 
+			*/
 
 			// Variable que guarda el comprobador asignado al generador
 
@@ -594,6 +615,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			char caracteresPosibles[CHAR_MAX] = "ABCDEFGHIJKLRRGPFSPRACTICAMPI2122hjash&&YhdBcLwFdSHHsdyhjkylkudaghkdjawgdalwADasdhjshdjh21658&&!1281asdasdjahsdkjhadsljhaejuj";
 			
+
 			// Bucle envio palabras generadoras
 
 			int i,j;
@@ -611,9 +633,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			while(encontrado != 1){
 
 				// Genera palabra aleatoria
-				// Segundo for del script de German, con este solo ya es suficiente y necesario
-
-				for( i = 0; i < longitud; i++){ // Este bucle solo generará en las posiciones que tengan un CHAR_NF, es decir, las erroneas
+				// Este bucle solo generará en las posiciones que tengan un CHAR_NF, es decir, las erroneas
+				for( i = 0; i < longitud; i++){ 
 					
 					j = rand() % (strlen(caracteresPosibles)+1);
 
@@ -666,18 +687,12 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 				MPI_Send(&compr_assig,1,MPI_INT,0,rol,MPI_COMM_WORLD);
 
 
-				// PISTA IMPLEMENTADO
+				// PISTA IMPLEMENTADO, si no está activado el modo pista, los buzones estarán
+				// siempre vacíos, asi que esto simplemente iterará pero sin hacer nada
 				// ----------------------------------------------------------------------------
 					for(i = 0; i < nprocs; i++){
-
-						// Comprobamos que haya mensaje en cada buzon
-
 						MPI_Iprobe(0,80+i,MPI_COMM_WORLD,&recv,&status);
-
-						// Si hay mensaje leerlo y comprobar
-
 						if(recv == 1){
-
 							MPI_Irecv(&palabra_pist,longitud,MPI_CHAR,0,80+i,MPI_COMM_WORLD,&request);
 						
 							for(i = 0; i < longitud; i++){
