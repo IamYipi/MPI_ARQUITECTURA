@@ -37,9 +37,10 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 	}
 
+	// Variables comunes a todos los procesos
+
 	int id, nprocs, winner;
 	char palabra[CHAR_MAX];
-	int pista = 0;
 	int flag = 0;
 	double tiempoTotal;
 
@@ -67,13 +68,15 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 	}
 
 		// Se copia la palabra a descubrir en la variable
+		// El proceso E/S tiene en la variable palabra, la palabra correcta
 
 		strcpy(palabra,"PRACTICAMPI2122");
 
-		/* El proceso E/S tiene en la variable palabra, la palabra correcta */
+		// Dependiendo del nprocs y del nºComprobadores, habrá un nºGeneradores
 		
 		int numComp = atoi(argv[1]);
 		int numGen = nprocs - (numComp + 1); // +1 pq seria E/S
+		int pista = atoi(argv[2]);
 
 		// Primera salida por pantalla
 
@@ -91,9 +94,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			MPI_Abort(MPI_COMM_WORLD, 2);
 
 		}
-		
-		// Dependiendo del nprocs y del nºComprobadores, habrá un nºGeneradores
-		//   -> Indica a cada proceso su rol, si es Generador, le dice cual es su Comprobador
 
 		int i,j;
 
@@ -103,6 +103,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		int gen_tag   = 1;
 
 		// Envia rol a los procesos comprobadores
+		//   -> Indica a cada proceso su rol, si es Generador, le dice cual es su Comprobador
 
 		fprintf(stdout,"NOTIFICACION TIPO\n");
 
@@ -124,10 +125,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			MPI_Send(&gen_tag, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 
 		}
-
-		// Sabra si se usan pistas o no segun argv[2]
-			
-		// Envía tipo de proceso
 			
 		// Envía longitud
 
@@ -244,7 +241,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Recibe id y palabra de un Generador
 
-
 			MPI_Recv(&idgen,1,MPI_INT,MPI_ANY_SOURCE,gen_tag,MPI_COMM_WORLD,&status);
 			MPI_Recv(&palabra_aux, long_palabra, MPI_CHAR, idgen, gen_tag, MPI_COMM_WORLD, &status);
 
@@ -276,8 +272,9 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 				}
 			}
 
+			// MODO PISTAAAAAAAAAAA 
 			// -----------------------------------------------------------------------------------------------
-			// Si pista activada bucle for envio palabra a cada generador. NO IMPLEMENTADO MODO PISTA
+			// Si pista activada bucle for envio palabra a cada generador.IMPLEMENTADO MODO PISTA
 
 			if(pista == 1){
 
@@ -285,7 +282,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 				for(i = j; i < nprocs; i++){
 
-					MPI_Isend(&palabra_aux, long_palabra, MPI_CHAR, 80, gen_tag, MPI_COMM_WORLD,&request);
+					MPI_Isend(&palabra_aux, long_palabra, MPI_CHAR, i, 80, MPI_COMM_WORLD,&request);
 
 				}
 
@@ -453,7 +450,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 
 					// Bucle for que comprueba letra a letra la palabra recibida con la palabra buena
-
 					// Tiempo Auxiliar para sumar al total de tiempo especifico en comprobaciones
 
 					tiempoAux = MPI_Wtime();
@@ -529,7 +525,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			// Variable que guarda el comprobador asignado al generador
 
 			int compr_assig;
-			char palabra_pist[CHAR_MAX];
+			char palabra_pist[longitud];
 
 			// Variables estadistica tiempo
 
@@ -560,6 +556,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			int i,j;
 			char a,b;
+			int recv = 0;
 
 			// Lleno el array de espacios vacios
 
@@ -610,9 +607,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 				MPI_Send(&id, 1, MPI_INT,0,rol,MPI_COMM_WORLD);
 				MPI_Send(&palabraAleatoria, longitud, MPI_CHAR, 0, rol, MPI_COMM_WORLD);
 
-				// MPI_Recv(&palabra,longitud,MPI_CHAR,0,0,MPI_COMM_WORLD,&status); //Modo pista
-
-
 				// Recibe flag encontrado para salir del bucle
 
 				MPI_Recv(&encontrado, 1, MPI_INT, 0,rol, MPI_COMM_WORLD,&status);
@@ -630,13 +624,15 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 				MPI_Send(&compr_assig,1,MPI_INT,0,rol,MPI_COMM_WORLD);
 
 
-				// PISTA NO IMPLEMENTADO
+				// PISTA IMPLEMENTADO
 				// ----------------------------------------------------------------------------
 
-				if(pista == 1){
+				MPI_Iprobe(0,80,MPI_COMM_WORLD,&recv,&status);
+
+				if(recv == 1){
 
 					MPI_Irecv(&palabra_pist,longitud,MPI_CHAR,0,80,MPI_COMM_WORLD,&request);
-					
+
 					for(i = 0; i < longitud; i++){
 
 						a = palabra_pist[i];
@@ -650,9 +646,10 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 					}
 
 				}
-				// ------------------------------------------------------------------------------	
+				recv = 0;
+			// ------------------------------------------------------------------------------	
 
-			}
+		}
 
 			// Tiempo de generador
 
