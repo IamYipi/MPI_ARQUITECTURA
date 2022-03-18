@@ -70,7 +70,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		// Se copia la palabra a descubrir en la variable
 		// El proceso E/S tiene en la variable palabra, la palabra correcta
 
-		strcpy(palabra,"PRACTICAMPI2122");
+		strcpy(palabra,"PRACTICAMPI2122hjasawdhj");
 
 		// Dependiendo del nprocs y del nºComprobadores, habrá un nºGeneradores
 		
@@ -267,8 +267,15 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 					// Imprime palabra que comprueba del generador
 
-					fprintf(stdout,"0%d)\t NO PISTA.....:\t %s\n",idgen,palabra_aux);
+					if(pista == 1){
 
+						fprintf(stdout,"0%d)\t PISTA.....:\t %s\n",idgen,palabra_aux);
+
+					}else{
+
+						fprintf(stdout,"0%d)\t NO PISTA.....:\t %s\n",idgen,palabra_aux);
+
+					}
 				}
 			}
 
@@ -361,9 +368,11 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		int itTotal = 0;
 
 		for(i = 0; i < numGen; i++){
+
 			itTotal += iteracionesGen[j];
 			fprintf(stdout,"|0%d) %10d \t| %15f \t| %15f \t| %15f \t|\n",j,iteracionesGen[j],tiempoGeneradores[j],tiempoGeneradores[j]- tiempoGeneradoresEspera[j],tiempoGeneradoresEspera[j]);
 			j++;
+
 		}
 
 		fprintf(stdout,"|-----------------------------------------------------------------------------------------------|\n");
@@ -378,9 +387,12 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		fprintf(stdout,"|-----------------------------------------------------------------------|\n");
 
 		for (i = 1; i <= numComp; i++){
+
 			itTotal += comprobaciones[i];
 			fprintf(stdout,"|0%d) %10d \t| %15f \t| %15f \t|\n",i,comprobaciones[i],tiempoComprobadores[i],tiempoComp[i]);
+
 		}
+
 		fprintf(stdout,"|-----------------------------------------------------------------------|\n");
 		fprintf(stdout,"| Iteraciones Totales: %d\n",itTotal);
 
@@ -549,7 +561,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Tener en cuenta que si se cambia la palabra a descubrir hay que añadir aqui los caracteres que posea al menos una vez.
 
-			char caracteresPosibles[] = "ABCDEFGHIJKLRRRMNIOQUTJAKSGHAJHGPFSGPfghafsghafsghafstjharfasdhjshdjh216531823612678&&!1281asdasdjahsdkjhadsljhaejuj";
+			char caracteresPosibles[] = "ABCDEFGHIJKLRRRMNIOQUTJAKSGHAJHGPFSPRACTICAMPI2122hjashkudaghkdjawgdalwADADABHSDBHJAWDlkaWDADkawdhjGPfghafsgAKDLHAWDlkdkadlkgroehglbfwepiiwadagbDBALWUEIUGELIhafsghafstjharfasdhjshdjh216531823612678&&!1281asdasdjahsdkjhadsljhaejuj";
 			
 
 			// Bucle envio palabras generadoras
@@ -636,12 +648,18 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 					for(i = 0; i < longitud; i++){
 
 						a = palabra_pist[i];
-						b = palabra[i];
+						b = palabraAleatoria[i];
 
-						if(a != b){
+						// Si a != espacio en blanco, entonces tendra una letra por lo que es letra valida acertada
+						// Se guarda directamente la letra en la palabra
 
-							palabra[i] = a; // Sustitucion por letra pista
+						if(a != CHAR_NF){
 
+							if(a != b){
+
+								palabraAleatoria[i] = a; // Sustitucion por letra pista
+
+							}
 						}
 					}
 
@@ -657,7 +675,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			MPI_Bcast(&flag, 1, MPI_INT, 0, MPI_COMM_WORLD); //Asegura finalizacion
 
-
 			// Envio estadisticas generadores al proceso cero
 
 			MPI_Send(&id,1,MPI_INT,0,rol,MPI_COMM_WORLD);
@@ -672,6 +689,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
+	// Fin programa
 
 	MPI_Finalize();
 	return 0;	
