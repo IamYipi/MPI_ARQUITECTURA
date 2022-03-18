@@ -312,13 +312,16 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 			// MODO PISTAAAAAAAAAAA 
 			// -----------------------------------------------------------------------------------------------
 			// Si pista activada bucle for envio palabra a cada generador.IMPLEMENTADO MODO PISTA
+			// Envia a cada buzon correspondiente a cada generador la palabra
 
 			if(pista == 1){
 
 				j = numComp + 1;
 
 				for(i = j; i < nprocs; i++){
+
 					MPI_Isend(&palabra_aux, long_palabra, MPI_CHAR, i, 80+i, MPI_COMM_WORLD,&request);
+
 				}
 
 			}
@@ -560,7 +563,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 		if(rol == 1){
 
-			srand( id * time(NULL)); // Semilla en base al tiempo y el id de cada proceso.
+			srand( id * 7092); // Semilla en base al tiempo y el id de cada proceso.
 
 			// Variable que guarda el comprobador asignado al generador
 
@@ -591,7 +594,6 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			char caracteresPosibles[CHAR_MAX] = "ABCDEFGHIJKLRRGPFSPRACTICAMPI2122hjash&&YhdBcLwFdSHHsdyhjkylkudaghkdjawgdalwADasdhjshdjh21658&&!1281asdasdjahsdkjhadsljhaejuj";
 			
-
 			// Bucle envio palabras generadoras
 
 			int i,j;
@@ -667,8 +669,15 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 				// PISTA IMPLEMENTADO
 				// ----------------------------------------------------------------------------
 					for(i = 0; i < nprocs; i++){
+
+						// Comprobamos que haya mensaje en cada buzon
+
 						MPI_Iprobe(0,80+i,MPI_COMM_WORLD,&recv,&status);
+
+						// Si hay mensaje leerlo y comprobar
+
 						if(recv == 1){
+
 							MPI_Irecv(&palabra_pist,longitud,MPI_CHAR,0,80+i,MPI_COMM_WORLD,&request);
 						
 							for(i = 0; i < longitud; i++){
