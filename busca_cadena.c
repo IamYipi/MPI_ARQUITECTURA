@@ -70,7 +70,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		// Se copia la palabra a descubrir en la variable
 		// El proceso E/S tiene en la variable palabra, la palabra correcta
 
-		strcpy(palabra,"ABCDEFGHIJKLRRGPFSPRACTICAMPI2122hjash&YhdBcLwFdSHHsdyhj22kylkudaghkdjawgdalwADasdhjshdjh21658&&!1281asdasdjahsdkjhadsljhaejuj");
+		strcpy(palabra,"PRACTICAMPI2122");
 
 		// Dependiendo del nprocs y del nºComprobadores, habrá un nºGeneradores
 		
@@ -158,16 +158,9 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Si la variable alcanza el numero de comprobadores total, se resetea
 			// Sino aumenta uno
+			
+			comp == numComp ? comp = 1 : comp++;
 
-			if( comp == numComp){
-
-				comp = 1;
-
-			}else{
-
-				comp++;
-
-			}
 
 		}
 
@@ -279,27 +272,40 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 				}else{
 
-					// Imprime palabra que comprueba del generador
-
-					if(pista == 1){
-						fprintf(stdout,"0%d)\t PISTA.....:\t",idgen);
-						fflush(stdin);
-						for( i = 0; i < long_palabra; i++){
-							fprintf(stdout,"%c",palabra_aux[i]);
-							fflush(stdin);
+					// Imprime palabra no vacía que comprueba del generador
+					
+					int no_vacio;
+					
+					for(i=0;i < long_palabra; i++){
+						if(palabra_aux[i] != CHAR_NF){
+							no_vacio = 1;
+							break;
 						}
-						fprintf(stdout,"\n");
-						fflush(stdin);
-					}else{
-						fprintf(stdout,"0%d)\t NO PISTA.....:\t",idgen);
-						fflush(stdin);
-						for( i = 0; i < long_palabra; i++){
-							fprintf(stdout,"%c",palabra_aux[i]);
-							fflush(stdin);
-						}
-						fprintf(stdout,"\n");
-						fflush(stdin);
 					}
+					
+					if(no_vacio == 1){
+
+						if(pista == 1){
+							fprintf(stdout,"0%d)\t PISTA.....:\t",idgen);
+							fflush(stdin);
+							for( i = 0; i < long_palabra; i++){
+								fprintf(stdout,"%c",palabra_aux[i]);
+								fflush(stdin);
+							}
+							fprintf(stdout,"\n");
+							fflush(stdin);
+						}else{
+							fprintf(stdout,"0%d)\t NO PISTA.....:\t",idgen);
+							fflush(stdin);
+							for( i = 0; i < long_palabra; i++){
+								fprintf(stdout,"%c",palabra_aux[i]);
+								fflush(stdin);
+							}
+							fprintf(stdout,"\n");
+							fflush(stdin);
+						}
+					}
+					no_vacio = 0;
 				}
 			}
 
@@ -312,9 +318,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 				j = numComp + 1;
 
 				for(i = j; i < nprocs; i++){
-
-					MPI_Isend(&palabra_aux, long_palabra, MPI_CHAR, i, 80, MPI_COMM_WORLD,&request);
-
+					MPI_Isend(&palabra_aux, long_palabra, MPI_CHAR, i, 80+i, MPI_COMM_WORLD,&request);
 				}
 
 			}
@@ -615,7 +619,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 						palabraAleatoria[i] = caracteresPosibles[j];
 
-					}				
+					}
 				}
 
 				// Forzamos espera
@@ -662,30 +666,31 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 				// PISTA IMPLEMENTADO
 				// ----------------------------------------------------------------------------
+					for(i = 0; i < nprocs; i++){
+						MPI_Iprobe(0,80+i,MPI_COMM_WORLD,&recv,&status);
+						if(recv == 1){
+							MPI_Irecv(&palabra_pist,longitud,MPI_CHAR,0,80+i,MPI_COMM_WORLD,&request);
+						
+							for(i = 0; i < longitud; i++){
 
-				MPI_Iprobe(0,80,MPI_COMM_WORLD,&recv,&status);
+								a = palabra_pist[i];
+								b = palabraAleatoria[i];
 
-				if(recv == 1){
+								// Si a != espacio en blanco, entonces tendra una letra por lo que es letra valida acertada
+								// Se guarda directamente la letra en la palabra
 
-					MPI_Irecv(&palabra_pist,longitud,MPI_CHAR,0,80,MPI_COMM_WORLD,&request);
+								if(a != CHAR_NF){
 
-					for(i = 0; i < longitud; i++){
+									if(a != b){
 
-						a = palabra_pist[i];
-						b = palabraAleatoria[i];
+										palabraAleatoria[i] = a; // Sustitucion por letra pista
 
-						// Si a != espacio en blanco, entonces tendra una letra por lo que es letra valida acertada
-						// Se guarda directamente la letra en la palabra
-
-						if(a != CHAR_NF){
-
-								palabraAleatoria[i] = a; // Sustitucion por letra pista
-
+									}
+								}
+							}
 						}
-					}
-
+						recv = 0;
 				}
-				recv = 0;
 			// ------------------------------------------------------------------------------	
 
 		}
