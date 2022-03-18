@@ -679,11 +679,8 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 						if(a != CHAR_NF){
 
-							if(a != b){
-
 								palabraAleatoria[i] = a; // Sustitucion por letra pista
 
-							}
 						}
 					}
 
