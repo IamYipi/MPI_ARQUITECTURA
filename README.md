@@ -16,7 +16,7 @@ sudo apt-get install openmpi-bin
 - [ X ]  Creación Proceso 0 **E/S**, guardado de palabra y su respectiva longitud.
 - [ X ]  Notificación *Rol* otros procesos
 - [ X ]  Notificación *Palabra y Longitud* a los **Comprobadores**
-- [ ]  Modo pista
+- [ X ]  Modo pista
 - [ X ]  Modo No Pista
 - Quedarse a la espera de:
 - [ X ]  Recibir cadena con caracteres ya encontrados
@@ -48,7 +48,7 @@ sudo apt-get install openmpi-bin
 - [ X ]  Asignar Comprobador
 - Tener en cuenta:
 - [ X ]  Recibo señal terminación
-- [ ]  Recibo pistas y actualizar cadena caracteres detectados
+- [ x ]  Recibo pistas y actualizar cadena caracteres detectados
 - Función:
 - [ X ]  Generar palabra de longitud indicada (Cuidado semilla)
 - [ X ]  Tener en cuenta caracteres ya encontrados
