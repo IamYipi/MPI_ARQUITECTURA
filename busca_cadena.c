@@ -70,7 +70,7 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 		// Se copia la palabra a descubrir en la variable
 		// El proceso E/S tiene en la variable palabra, la palabra correcta
 
-		strcpy(palabra,"PRACTICAMPI2122hjasawdhj");
+		strcpy(palabra,"ABCDEFGHIJKLRRGPFSPRACTICAMPI2122hjash&YhdBcLwFdSHHsdyhj22kylkudaghkdjawgdalwADasdhjshdjh21658&&!1281asdasdjahsdkjhadsljhaejuj");
 
 		// Dependiendo del nprocs y del nºComprobadores, habrá un nºGeneradores
 		
@@ -260,21 +260,45 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 					// Muestra por pantalla ganador y palabra buscada y encontrada
 
 					fprintf(stdout,"\nPALABRA ENCONTRADA POR %d\n",winner);
-					fprintf(stdout,"BUSCADA...: %s\n",palabra);
-					fprintf(stdout,"ENCONTRADA: %s\n",palabra_aux);
+					fflush(stdin);
+					fprintf(stdout,"BUSCADA...:  ");
+					fflush(stdin);
+					for( i = 0; i < long_palabra; i++){
+						fprintf(stdout,"%c",palabra_aux[i]);
+						fflush(stdin);
+					}
+					fprintf(stdout,"\n");
+					fflush(stdin);
+					fprintf(stdout,"ENCONTRADA:  ");
+					for( i = 0; i < long_palabra; i++){
+						fprintf(stdout,"%c",palabra_aux[i]);
+						fflush(stdin);
+					}
+					fprintf(stdout,"\n");
+					fflush(stdin);
 
 				}else{
 
 					// Imprime palabra que comprueba del generador
 
 					if(pista == 1){
-
-						fprintf(stdout,"0%d)\t PISTA.....:\t %s\n",idgen,palabra_aux);
-
+						fprintf(stdout,"0%d)\t PISTA.....:\t",idgen);
+						fflush(stdin);
+						for( i = 0; i < long_palabra; i++){
+							fprintf(stdout,"%c",palabra_aux[i]);
+							fflush(stdin);
+						}
+						fprintf(stdout,"\n");
+						fflush(stdin);
 					}else{
-
-						fprintf(stdout,"0%d)\t NO PISTA.....:\t %s\n",idgen,palabra_aux);
-
+						fprintf(stdout,"0%d)\t NO PISTA.....:\t",idgen);
+						fflush(stdin);
+						for( i = 0; i < long_palabra; i++){
+							fprintf(stdout,"%c",palabra_aux[i]);
+							fflush(stdin);
+						}
+						fprintf(stdout,"\n");
+						fflush(stdin);
 					}
 				}
 			}
@@ -557,11 +581,11 @@ ejemplo ejecucion:   	mpirun -np 7 --oversubscribe nombre_ejecutable 2 0
 
 			// Variable palabraAleatoria que se va obteniendo segun la generacion de palabras
 
-			char palabraAleatoria[longitud];
+			char palabraAleatoria[CHAR_MAX];
 
 			// Tener en cuenta que si se cambia la palabra a descubrir hay que añadir aqui los caracteres que posea al menos una vez.
 
-			char caracteresPosibles[] = "ABCDEFGHIJKLRRRMNIOQUTJAKSGHAJHGPFSPRACTICAMPI2122hjashkudaghkdjawgdalwADADABHSDBHJAWDlkaWDADkawdhjGPfghafsgAKDLHAWDlkdkadlkgroehglbfwepiiwadagbDBALWUEIUGELIhafsghafstjharfasdhjshdjh216531823612678&&!1281asdasdjahsdkjhadsljhaejuj";
+			char caracteresPosibles[CHAR_MAX] = "ABCDEFGHIJKLRRGPFSPRACTICAMPI2122hjash&&YhdBcLwFdSHHsdyhjkylkudaghkdjawgdalwADasdhjshdjh21658&&!1281asdasdjahsdkjhadsljhaejuj";
 			
 
 			// Bucle envio palabras generadoras
