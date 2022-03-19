@@ -7,7 +7,7 @@
 ## Comienzo
 Primero de todo tener instalado **MPI**. Instalar con el comando:
 ```sh
-sudo apt-get install openmpi-bin
+sudo apt-get install openmpi-bin openmpi-common openssh-client openssh-server libopenmpi-dev
 ```
 ## TRABAJO
 - [ X ] Salida por pantalla como [Enunciado](EnunciadoPrácticaMP2122I.pdf)
